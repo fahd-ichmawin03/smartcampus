@@ -19,8 +19,10 @@ class UserLogin(BaseModel):
 
 @app.post("/api/login")
 def login(user: UserLogin):
-    # Simulation d'une vérification en base de données
     if user.email == "admin@smartcampus.ma" and user.password == "password123":
         return {"status": "success", "message": "Connexion réussie"}
+    
+    # Ajout du log de sécurité demandé lors de la revue
+    print(f"[ALERTE SÉCURITÉ] Tentative de connexion échouée pour l'e-mail : {user.email}")
     
     raise HTTPException(status_code=401, detail="Mot de passe ou e-mail incorrect")
