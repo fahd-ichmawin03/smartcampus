@@ -26,3 +26,32 @@ def login(user: UserLogin):
     print(f"[ALERTE SÉCURITÉ] Tentative de connexion échouée pour l'e-mail : {user.email}")
     
     raise HTTPException(status_code=401, detail="Mot de passe ou e-mail incorrect")
+import os
+import psycopg
+
+@app.get("/api/database-check")
+def database_check():
+    database_url = os.getenv("DATABASE_URL")
+
+    if not database_url:
+        raise HTTPException(
+            status_code=503,
+            detail="La variable DATABASE_URL n'est pas définie"
+        )
+
+    try:
+        with psycopg.connect(database_url, connect_timeout=5) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT current_database()")
+                database_name = cursor.fetchone()[0]
+
+        return {
+            "status": "success",
+            "message": "Connexion à PostgreSQL réussie",
+            "database": database_name
+        }
+    except psycopg.Error:
+        raise HTTPException(
+            status_code=503,
+            detail="Connexion à PostgreSQL impossible"
+        )
