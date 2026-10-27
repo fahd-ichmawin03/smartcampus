@@ -1,0 +1,61 @@
+pipeline {
+    agent any
+
+    // Python 3 et Docker doivent etre installes sur l'agent.
+    environment {
+        CI = 'true'
+        IMAGE = 'smartcampus'
+    }
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+                sh 'python3 --version && git log -1 --oneline'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh '''
+                    python3 -m venv .venv
+                    . .venv/bin/activate
+                    pip install --no-cache-dir -r backend/requirements.txt
+                '''
+                // Image Docker de l'application (Dockerfile a la racine).
+                sh 'docker build -t ${IMAGE}:${BUILD_NUMBER} .'
+                // Artefact de la phase CI.
+                sh 'tar --exclude=__pycache__ -czf smartcampus-build.tar.gz backend Dockerfile compose.yaml'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                // pytest renvoie 5 quand aucun test n'est trouve : pas un echec.
+                sh '''
+                    . .venv/bin/activate
+                    pip install --no-cache-dir pytest
+                    pytest -v || [ $? -eq 5 ]
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            archiveArtifacts artifacts: 'smartcampus-build.tar.gz', fingerprint: true
+        }
+        always {
+            echo "Pipeline SmartCampus : ${currentBuild.currentResult}"
+        }
+        failure {
+            echo 'Pipeline SmartCampus : ECHEC. Verifiez les logs du stage en erreur.'
+        }
+    }
+}
