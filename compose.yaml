@@ -2,6 +2,8 @@ services:
   api:
     build: .
     image: smartcampus:1.0
+    environment:
+      DATABASE_URL: "postgresql://smartcampus:smartcampus_tp@db:5432/smartcampus"
     ports:
       - "8080:8080"
     depends_on:
